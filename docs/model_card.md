@@ -12,6 +12,11 @@ Estimate customer churn risk for educational and portfolio demonstration purpose
 |-----------:|------------:|---------:|-------:|----------:|
 |     0.8055 |      0.6678 |   0.5321 | 0.5923 |    0.8467 |
 
+## Operating Threshold
+
+- Decision threshold: 0.30
+- Threshold strategy: Maximize F1 among thresholds with recall >= 0.65
+
 ## Explainability Method
 
 SHAP summary plot

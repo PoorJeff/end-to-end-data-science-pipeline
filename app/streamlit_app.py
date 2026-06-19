@@ -48,8 +48,13 @@ with right:
 
 if st.button("Predict churn", type="primary"):
     result = predict_churn(bundle, payload)
-    st.metric("Churn probability", f"{result['churn_probability']:.1%}")
-    st.metric("Prediction", result["prediction_label"])
+    metric_left, metric_middle, metric_right = st.columns(3)
+    metric_left.metric("Churn probability", f"{result['churn_probability']:.1%}")
+    metric_middle.metric("Decision threshold", f"{result['decision_threshold']:.0%}")
+    metric_right.metric("Risk band", result["risk_band"])
+
+    st.subheader("Recommended action")
+    st.write(result["recommended_action"])
 
     top_features = result["top_contributing_features"]
     if top_features:

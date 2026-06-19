@@ -20,11 +20,13 @@ from src.config import (
     RANDOM_STATE,
     REPORTS_DIR,
 )
+from src.business import lift_table, select_operating_threshold, threshold_metrics
 from src.data_loader import build_data_quality_summary, load_raw_data, save_data_quality_report
 from src.eda import save_eda_figures
 from src.evaluate import (
     evaluate_classifier,
     metrics_to_markdown,
+    prediction_scores,
     save_confusion_matrix,
     save_precision_recall_curve,
     save_roc_curve,
@@ -163,14 +165,52 @@ def save_model_comparison_report(results: list[dict[str, object]], best_name: st
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def save_final_report(best_name: str, results: list[dict[str, object]], path: Path) -> None:
+def save_threshold_analysis_report(
+    threshold_table: pd.DataFrame,
+    selected_threshold: dict[str, float | int],
+    lift: pd.DataFrame,
+    path: Path,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    selected = pd.DataFrame([selected_threshold])
+    lines = [
+        "# Threshold Analysis",
+        "",
+        "The model outputs churn probabilities. The operating threshold converts those probabilities into action decisions.",
+        "",
+        "## Selected Operating Threshold",
+        "",
+        selected.to_markdown(index=False),
+        "",
+        "This threshold is selected by maximizing F1 among thresholds that meet the recall floor. The goal is to catch a useful share of likely churners without contacting every customer.",
+        "",
+        "## Threshold Tradeoff Table",
+        "",
+        threshold_table.to_markdown(index=False),
+        "",
+        "## Lift Table",
+        "",
+        lift.to_markdown(index=False),
+        "",
+    ]
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def save_final_report(
+    best_name: str,
+    results: list[dict[str, object]],
+    selected_threshold: dict[str, float | int],
+    lift: pd.DataFrame,
+    path: Path,
+) -> None:
     top = sorted(results, key=lambda row: row["ROC-AUC"], reverse=True)
+    top_lift = lift.head(3)
     lines = [
         "# Final Report",
         "",
         "## Executive Summary",
         "",
-        f"The pipeline trains and compares multiple churn classifiers. The selected model is **{best_name}**, chosen by ROC-AUC on the held-out test set.",
+        f"The pipeline trains and compares multiple churn classifiers. The selected model is **{best_name}**, chosen by ROC-AUC on the held-out test set. The recommended operating threshold is **{selected_threshold['threshold']:.2f}**, which supports a higher-recall retention workflow.",
         "",
         "## Five EDA and Modeling Takeaways",
         "",
@@ -178,11 +218,23 @@ def save_final_report(best_name: str, results: list[dict[str, object]], path: Pa
         "2. Tenure and total charges capture customer maturity and retention history.",
         "3. Electronic check payment can be associated with higher churn risk in this dataset.",
         "4. Accuracy should be read together with Recall, Precision, F1, and ROC-AUC.",
-        "5. Explainability artifacts help translate model output into business actions.",
+        "5. Threshold and lift analysis translate probability scores into a practical outreach list.",
         "",
         "## Model Ranking",
         "",
         pd.DataFrame(top).to_markdown(index=False),
+        "",
+        "## Operating Threshold",
+        "",
+        pd.DataFrame([selected_threshold]).to_markdown(index=False),
+        "",
+        "## Top Lift Segments",
+        "",
+        top_lift.to_markdown(index=False),
+        "",
+        "## Business Recommendation",
+        "",
+        "Use the selected threshold to create a high-priority retention queue. Start with the top lift deciles, pair outreach with contract and support interventions, and tune the threshold when campaign capacity or contact cost changes.",
         "",
         "## Limitations",
         "",
@@ -211,6 +263,11 @@ def save_model_card(bundle: dict[str, Any], path: Path) -> None:
         "## Metrics",
         "",
         pd.DataFrame([metrics]).to_markdown(index=False),
+        "",
+        "## Operating Threshold",
+        "",
+        f"- Decision threshold: {bundle.get('decision_threshold', 0.5):.2f}",
+        f"- Threshold strategy: {bundle.get('threshold_strategy', 'Fixed default threshold')}",
         "",
         "## Top Features",
         "",
@@ -268,6 +325,10 @@ def run_training() -> dict[str, Any]:
         best_pipeline = search.best_estimator_
 
     best_metrics = evaluate_classifier(best_pipeline, X_test, y_test)
+    best_scores = prediction_scores(best_pipeline, X_test)
+    threshold_table = threshold_metrics(y_test, pd.Series(best_scores), thresholds=[round(value, 2) for value in [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6]])
+    selected_threshold = select_operating_threshold(threshold_table, min_recall=0.65)
+    lift = lift_table(y_test, pd.Series(best_scores), buckets=10)
     preprocessor = best_pipeline.named_steps["preprocessor"]
     feature_names = get_feature_names(preprocessor)
     top_features = extract_model_importance(best_pipeline, feature_names)
@@ -276,7 +337,10 @@ def run_training() -> dict[str, Any]:
     save_roc_curve(best_pipeline, X_test, y_test, FIGURES_DIR / "roc_curve.png")
     save_precision_recall_curve(best_pipeline, X_test, y_test, FIGURES_DIR / "precision_recall_curve.png")
     save_model_comparison_report(results, best_name, REPORTS_DIR / "model_comparison.md")
-    save_final_report(best_name, results, REPORTS_DIR / "final_report.md")
+    threshold_table.to_csv(REPORTS_DIR / "threshold_analysis.csv", index=False)
+    lift.to_csv(REPORTS_DIR / "lift_table.csv", index=False)
+    save_threshold_analysis_report(threshold_table, selected_threshold, lift, REPORTS_DIR / "threshold_analysis.md")
+    save_final_report(best_name, results, selected_threshold, lift, REPORTS_DIR / "final_report.md")
 
     bundle: dict[str, Any] = {
         "model": best_pipeline,
@@ -293,7 +357,10 @@ def run_training() -> dict[str, Any]:
         "categorical_options": option_values_from_training_data(
             X_train, metadata.categorical_features
         ),
-        "decision_threshold": 0.5,
+        "decision_threshold": float(selected_threshold["threshold"]),
+        "threshold_strategy": "Maximize F1 among thresholds with recall >= 0.65",
+        "operating_threshold_metrics": selected_threshold,
+        "lift_top_deciles": lift.head(3).to_dict(orient="records"),
         "trained_at": datetime.now(timezone.utc).isoformat(),
     }
     joblib.dump(bundle, MODEL_PATH)

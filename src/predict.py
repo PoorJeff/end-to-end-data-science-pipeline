@@ -8,6 +8,7 @@ import joblib
 import pandas as pd
 
 from src.config import MODEL_PATH
+from src.business import classify_risk, recommend_retention_action
 from src.evaluate import prediction_scores
 
 
@@ -48,10 +49,14 @@ def predict_churn(bundle: dict[str, Any], payload: dict[str, Any]) -> dict[str, 
     model = bundle["model"]
     frame = payload_to_frame(bundle, payload)
     probability = float(prediction_scores(model, frame)[0])
-    prediction = int(probability >= bundle.get("decision_threshold", 0.5))
+    threshold = float(bundle.get("decision_threshold", 0.5))
+    prediction = int(probability >= threshold)
     return {
         "churn_probability": round(probability, 4),
+        "decision_threshold": round(threshold, 4),
         "prediction": prediction,
         "prediction_label": "Churn" if prediction == 1 else "No Churn",
+        "risk_band": classify_risk(probability, threshold),
+        "recommended_action": recommend_retention_action(probability, threshold),
         "top_contributing_features": bundle.get("top_features", [])[:5],
     }

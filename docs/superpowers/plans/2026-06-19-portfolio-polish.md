@@ -19,11 +19,11 @@
 - Modify: `src/predict.py`
 - Modify: `tests/test_predict.py`
 
-- [ ] **Step 1: Write tests for threshold metrics, lift table, risk bands, and prediction action fields.**
-- [ ] **Step 2: Run tests and verify the new tests fail before implementation.**
-- [ ] **Step 3: Implement `src/business.py` with threshold analysis, lift analysis, risk bands, and retention recommendations.**
-- [ ] **Step 4: Wire selected threshold and top lift deciles into the model bundle and prediction output.**
-- [ ] **Step 5: Run focused tests and verify they pass.**
+- [x] **Step 1: Write tests for threshold metrics, lift table, risk bands, and prediction action fields.**
+- [x] **Step 2: Run tests and verify the new tests fail before implementation.**
+- [x] **Step 3: Implement `src/business.py` with threshold analysis, lift analysis, risk bands, and retention recommendations.**
+- [x] **Step 4: Wire selected threshold and top lift deciles into the model bundle and prediction output.**
+- [x] **Step 5: Run focused tests and verify they pass.**
 
 ### Task 2: Portfolio Documentation
 
@@ -34,9 +34,9 @@
 - Modify: `README.md`
 - Modify: `reports/final_report.md`
 
-- [ ] **Step 1: Add data-card and API examples.**
-- [ ] **Step 2: Add resume-ready English and Chinese bullets.**
-- [ ] **Step 3: Update README with CI badge, one-command workflow, threshold analysis, and resume highlights.**
+- [x] **Step 1: Add data-card and API examples.**
+- [x] **Step 2: Add resume-ready English and Chinese bullets.**
+- [x] **Step 3: Update README with CI badge, one-command workflow, threshold analysis, and resume highlights.**
 
 ### Task 3: Reproducibility Automation
 
@@ -44,16 +44,16 @@
 - Create: `.github/workflows/ci.yml`
 - Create: `Makefile`
 
-- [ ] **Step 1: Add CI that installs dependencies and runs tests on pushes to `main`.**
-- [ ] **Step 2: Add local make targets for install, test, train, explain, app, api, and all.**
+- [x] **Step 1: Add CI that installs dependencies and runs tests on pushes to `main`.**
+- [x] **Step 2: Add local make targets for install, test, train, explain, app, api, and all.**
 
 ### Task 4: Regenerate, Verify, Commit, Push
 
 **Files:**
 - Update generated model/report artifacts.
 
-- [ ] **Step 1: Run `python -m pytest -q`.**
-- [ ] **Step 2: Run `python -m src.train`.**
-- [ ] **Step 3: Run `python -m src.explain`.**
-- [ ] **Step 4: Run final `python -m pytest -q`.**
+- [x] **Step 1: Run `python -m pytest -q`.**
+- [x] **Step 2: Run `python -m src.train`.**
+- [x] **Step 3: Run `python -m src.explain`.**
+- [x] **Step 4: Run final `python -m pytest -q`.**
 - [ ] **Step 5: Commit and push `HEAD:main` only.**

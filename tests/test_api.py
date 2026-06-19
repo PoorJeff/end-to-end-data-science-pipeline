@@ -31,8 +31,11 @@ def test_predict_endpoint_returns_stable_response_structure(monkeypatch):
     def fake_predict(bundle, payload):
         return {
             "churn_probability": 0.73,
+            "decision_threshold": 0.45,
             "prediction": 1,
             "prediction_label": "Churn",
+            "risk_band": "High",
+            "recommended_action": "High-priority retention outreach.",
             "top_contributing_features": [],
         }
 
@@ -68,7 +71,10 @@ def test_predict_endpoint_returns_stable_response_structure(monkeypatch):
     assert response.status_code == 200
     assert response.json() == {
         "churn_probability": 0.73,
+        "decision_threshold": 0.45,
         "prediction": 1,
         "prediction_label": "Churn",
+        "risk_band": "High",
+        "recommended_action": "High-priority retention outreach.",
         "top_contributing_features": [],
     }

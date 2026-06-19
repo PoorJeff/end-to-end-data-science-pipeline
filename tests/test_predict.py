@@ -34,6 +34,7 @@ def test_predict_churn_returns_probability_label_and_top_features():
         "model": pipeline,
         "numeric_features": ["tenure"],
         "categorical_features": ["contract"],
+        "decision_threshold": 0.45,
         "top_features": [
             {"feature": "contract_Month-to-month", "importance": 0.42},
             {"feature": "tenure", "importance": 0.31},
@@ -42,7 +43,18 @@ def test_predict_churn_returns_probability_label_and_top_features():
 
     result = predict_churn(bundle, {"tenure": 2, "contract": "Month-to-month"})
 
-    assert set(result) == {"churn_probability", "prediction", "prediction_label", "top_contributing_features"}
+    assert set(result) == {
+        "churn_probability",
+        "decision_threshold",
+        "prediction",
+        "prediction_label",
+        "risk_band",
+        "recommended_action",
+        "top_contributing_features",
+    }
     assert 0.0 <= result["churn_probability"] <= 1.0
+    assert result["decision_threshold"] == 0.45
     assert result["prediction_label"] in {"Churn", "No Churn"}
+    assert result["risk_band"] in {"Low", "Medium", "High"}
+    assert isinstance(result["recommended_action"], str)
     assert result["top_contributing_features"][0]["feature"] == "contract_Month-to-month"
